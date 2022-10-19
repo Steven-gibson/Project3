@@ -1,3 +1,7 @@
+import requests
+import lxml
+import pygal
+
 def main():
     choice = "y"
     while choice == "y":
