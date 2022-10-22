@@ -2,8 +2,10 @@ import requests
 import lxml
 import pygal
 import datetime
+import sys
 
 def getDateRange(start, end, timeSeries):
+    print("The start date is", start)
     start_date = start.split("-")
     end_date = end.split("-")
     start_date = datetime.date(int(start_date[0]), int(start_date[1]), int(start_date[2]))
@@ -67,9 +69,26 @@ def getInput():
             except:
                 print("Enter numbers 1-4 only")
                 continue
-        startDate = input("What is the start date? Format: YYYY-MM-DD: ")
+        while True:
+            try:
+                start_Date = input("What is the start date? Format: YYYY-MM-DD: ")
+                start_Date = str(datetime.datetime.strptime(start_Date, "%Y-%m-%d"))
+                startDate = start_Date.split(' ')[0]
+                break
+            except ValueError:
+                print('Please enter according to format')
+
         inputs.append(startDate)
-        endDate = input("what is the end date? Format: YYYY-MM-DD: ")
+
+        while True:
+            try:
+                end_Date = input("what is the end date? Format: YYYY-MM-DD: ")
+                end_Date = str(datetime.datetime.strptime(end_Date, "%Y-%m-%d"))
+                endDate = end_Date.split(' ')[0]
+                break
+            except ValueError:
+                print('Please enter according to format')
+
         inputs.append(endDate)
         return inputs
 
