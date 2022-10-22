@@ -92,20 +92,28 @@ def getInput():
         inputs.append(endDate)
         return inputs
 
+def apiCall(timeSeries,symbol,dateRange):
+    jsonResponse = []
+    if timeSeries == "DAILY":
+        for day in dateRange:
+            #url = 'https://www.alphavantage.co/query?function=TIME_SERIES_' + timeSeries + '&symbol='+ symbol +'&interval=5min&apikey=TJ5UI0CUVXDLAV9K&date=' + day
+            #r = requests.get(url)
+            #data = r.json()
+            jsonResponse.append((day))
+    return jsonResponse
+
+
 def main():
     choice = "y"
     timeSeriesChoice = {1: "INTRADAILY",2:"DAILY",3:"WEEKLY",4:"MONTHY"}
     while choice == "y":
         inputs = getInput()
         dateRange = getDateRange(inputs[3], inputs[4],timeSeriesChoice[inputs[2]])
-        print(dateRange)
-        # TODO: add API call and chart generation
+
+        print(apiCall(timeSeriesChoice[inputs[2]],inputs[0],dateRange))
         choice = input("Would you like to select another company? ").lower()
-        url = 'https://www.alphavantage.co/query?function=TIME_SERIES_' + timeSeries.upper() + '&symbol='+ symbol +'&interval=5min&apikey=TJ5UI0CUVXDLAV9K'
-        #url = 'https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=IBM&interval=5min&apikey=TJ5UI0CUVXDLAV9K'
-        r = requests.get(url)
-        data = r.json()
-        print(data["Monthly Time Series"]["2022-10-20"])
+
+        #print(data["Monthly Time Series"]["2022-10-20"])
 
 if __name__ == "__main__":
     main()
