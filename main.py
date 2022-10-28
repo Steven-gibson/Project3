@@ -1,3 +1,4 @@
+from tracemalloc import start
 import requests
 import lxml
 import pygal
@@ -59,6 +60,7 @@ def getInput():
                 start_Date = str(datetime.datetime.strptime(start_Date, "%Y-%m-%d"))
                 startDate = start_Date.split(' ')[0]
                 break
+
             except ValueError:
                 print('Please enter according to format')
 
@@ -69,6 +71,9 @@ def getInput():
                 end_Date = input("what is the end date? Format: YYYY-MM-DD: ")
                 end_Date = str(datetime.datetime.strptime(end_Date, "%Y-%m-%d"))
                 endDate = end_Date.split(' ')[0]
+                if end_Date < start_Date:
+                    print("Start date must come before the End date")
+                    continue
                 break
             except ValueError:
                 print('Please enter according to format')
@@ -143,7 +148,7 @@ def parseJSON(rawJSON, timeSeries, dateRange):
         buildGraph = {"jsonDateRange":jsonDateRange, "xLabels":xLabels}
         return buildGraph
 
-def createGraph(jsonDateRange,timeSeries, xLabels, start, end):
+def createGraph(jsonDateRange,timeSeries, xLabels, start, end,typeofgraph):
     # TODO append date range to title as well
     # TODO capture lowest and highest range in the data so can use map()
     openList = []
@@ -176,16 +181,29 @@ def createGraph(jsonDateRange,timeSeries, xLabels, start, end):
         closeList.append(float(jsonDateRange[i]['4. close']))
         #volumeList.append(float(jsonDateRange[i]['5. volume']))
 
-    line_chart = pygal.Line(x_label_rotation=35)
-    line_chart.title = title
-    line_chart.x_labels = xLabels
-    #line_chart.y_labels = map(str, range(math.floor(minimum), math.ceil(maximum)))
-    line_chart.add(categories[0], openList)
-    line_chart.add(categories[1], highList)
-    line_chart.add(categories[2], lowList)
-    line_chart.add(categories[3], closeList)
-    #line_chart.add(categories[4], volumeList)
-    line_chart.render_in_browser()
+    if typeofgraph == 1:
+        bar_chart = pygal.Bar(x_label_rotation=90)
+        bar_chart.title = title
+        bar_chart.x_labels = xLabels
+            #line_chart.y_labels = map(str, range(math.floor(minimum), math.ceil(maximum)))
+        bar_chart.add(categories[0], openList)
+        bar_chart.add(categories[1], highList)
+        bar_chart.add(categories[2], lowList)
+        bar_chart.add(categories[3], closeList)
+            #line_chart.add(categories[4], volumeList)
+        bar_chart.render_in_browser()
+
+    if typeofgraph == 2:
+        line_chart = pygal.Line(x_label_rotation=35)
+        line_chart.title = title
+        line_chart.x_labels = xLabels
+        #line_chart.y_labels = map(str, range(math.floor(minimum), math.ceil(maximum)))
+        line_chart.add(categories[0], openList)
+        line_chart.add(categories[1], highList)
+        line_chart.add(categories[2], lowList)
+        line_chart.add(categories[3], closeList)
+        #line_chart.add(categories[4], volumeList)
+        line_chart.render_in_browser()
 
 def main():
     choice = "y"
@@ -195,15 +213,13 @@ def main():
         dateRange = getDateRange(inputs[3], inputs[4],timeSeriesChoice[inputs[2]])
     
         data = apiCall(timeSeriesChoice[inputs[2]],inputs[0])
-        buildGraph = parseJSON(data, timeSeriesChoice[inputs[2]],dateRange)
+        buildGraph = parseJSON(data, timeSeriesChoice[inputs[2]],dateRange,)
         jsonDateRange = buildGraph["jsonDateRange"]
         xLabels = buildGraph["xLabels"]
 
-        createGraph(jsonDateRange, timeSeriesChoice[inputs[2]],xLabels,inputs[3], inputs[4])
+        createGraph(jsonDateRange, timeSeriesChoice[inputs[2]],xLabels,inputs[3], inputs[4],inputs[1])
         choice = input("Would you like to select another company? ").lower()
 
         #print(data["Monthly Time Series"]["2022-10-20"])
-        
-
 if __name__ == "__main__":
     main()
