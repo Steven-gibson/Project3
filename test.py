@@ -4,6 +4,7 @@ import pygal
 import datetime
 import sys
 import math
+from dateutil.relativedelta import relativedelta
 
 
 # below function takes user input for date start and end
@@ -11,40 +12,17 @@ import math
 # has check for what user defined (weekly, monthly, etc.)
 
 def getDateRange(start, end, timeSeries):
-    print("The start date is", start)
     start_date = start.split("-")
     end_date = end.split("-")
     start_date = datetime.date(int(start_date[0]), int(start_date[1]), int(start_date[2]))
     end_date = datetime.date(int(end_date[0]), int(end_date[1]), int(end_date[2]))
     dateRange = []
-    # if timeSeries == "INTRADAILY":
-    #     delta = datetime.timedelta(days=1)
-    #     while (start_date <= end_date):
-    #         day = str(start_date.year) +'-'+str(start_date.month)+'-'+str(start_date.day)
-    #         dateRange.append(day)
-    #         start_date += delta
-    #     return dateRange
-    if timeSeries == "DAILY":
-        delta = datetime.timedelta(days=1)
-        while (start_date <= end_date):
-            day = str(start_date.year) +'-'+str(start_date.month)+'-'+str(start_date.day)
-            dateRange.append(day)
-            start_date += delta
-        return dateRange
-    elif timeSeries == "WEEKLY":
-        delta = datetime.timedelta(weeks=1)
-        while (start_date <= end_date):
-            day = str(start_date.year) +'-'+str(start_date.month)+'-'+str(start_date.day)
-            dateRange.append(day)
-            start_date += delta
-        return dateRange
-    elif timeSeries == "MONTHLY":
-        #delta = datetime.timedelta(months=1)
-        while (start_date <= end_date):
-            day = str(start_date.year) +'-'+str(start_date.month)+'-'+str(start_date.day)
-            dateRange.append(day)
-            start_date += delta
-        return dateRange
+    delta = datetime.timedelta(days=1)
+    while (start_date <= end_date):
+        day = str(start_date.year) +'-'+str(start_date.month)+'-'+str(start_date.day)
+        dateRange.append(day)
+        start_date += delta
+    return dateRange
 
 def getInput():
     inputs = []
@@ -104,62 +82,124 @@ def apiCall(timeSeries,symbol):
         url = 'https://www.alphavantage.co/query?function=TIME_SERIES_' + timeSeries + '&symbol='+ symbol +'&outputsize=full&interval=5min&apikey=TJ5UI0CUVXDLAV9K'
         r = requests.get(url)
         data = r.json()
-    return data
+        return data
+
+    if timeSeries == "WEEKLY":
+        url = 'https://www.alphavantage.co/query?function=TIME_SERIES_' + timeSeries + '&symbol='+ symbol +'&outputsize=full&interval=5min&apikey=TJ5UI0CUVXDLAV9K'
+        r = requests.get(url)
+        data = r.json()
+        return data
+
+    if timeSeries == "MONTHLY":
+        # https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=GOOGL&outputsize=full&apikey=TJ5UI0CUVXDLAV9K
+        url = 'https://www.alphavantage.co/query?function=TIME_SERIES_' + timeSeries + '&symbol='+ symbol +'&outputsize=full&interval=5min&apikey=TJ5UI0CUVXDLAV9K'
+        r = requests.get(url)
+        data = r.json()
+        return data
 
 def parseJSON(rawJSON, timeSeries, dateRange):
-    jsonDateRage = []
+    jsonDateRange = []
+    xLabels = []
     if timeSeries == "DAILY":
         for date in dateRange:
             try:
                 splitDate = date.split('-')
                 day = date.split('-')[2].zfill(2)
-                date = splitDate[0] +'-'+splitDate[1]+'-'+ day
-                jsonDateRage.append(rawJSON['Time Series (Daily)'][date])
+                date = splitDate[0] +'-'+splitDate[1].zfill(2)+'-'+ day
+                print("*\n",date)
+                jsonDateRange.append(rawJSON['Time Series (Daily)'][date])
+                xLabels.append(date)
             except KeyError:
                 continue
-        return jsonDateRage
+        buildGraph = {"jsonDateRange":jsonDateRange, "xLabels":xLabels}
 
-def createGraph(jsonDateRange,timeSeries):
+        return buildGraph
+
+    if timeSeries == "WEEKLY":
+        for date in dateRange:
+            try:
+                splitDate = date.split('-')
+                day = date.split('-')[2].zfill(2)
+                date = splitDate[0] +'-'+splitDate[1].zfill(2)+'-'+ day
+                print("*\n",date)
+                jsonDateRange.append(rawJSON['Weekly Time Series'][date])
+                xLabels.append(date)
+            except KeyError:
+                continue
+        buildGraph = {"jsonDateRange":jsonDateRange, "xLabels":xLabels}
+        return buildGraph
+
+    if timeSeries == "MONTHLY":
+        for date in dateRange:
+            try:
+                splitDate = date.split('-')
+                day = date.split('-')[2].zfill(2)
+                date = splitDate[0] +'-'+splitDate[1].zfill(2)+'-'+ day
+                print("*\n",date)
+                jsonDateRange.append(rawJSON['Monthly Time Series'][date])
+                xLabels.append(date)
+            except KeyError:
+                continue
+        buildGraph = {"jsonDateRange":jsonDateRange, "xLabels":xLabels}
+        return buildGraph
+
+def createGraph(jsonDateRange,timeSeries, xLabels, start, end):
     # TODO append date range to title as well
     # TODO capture lowest and highest range in the data so can use map()
-
+    openList = []
+    highList = []
+    lowList = []
+    closeList = []
+    volumeList = []
+    print(jsonDateRange[0])
     categories = list(jsonDateRange[0].keys())
-    print('*')
-    print(categories)
 
     if timeSeries == "DAILY":
-        title = "Time Series (Daily)"
+        title = "Time Series (Daily) " + start + " - " + end
+    if timeSeries == "MONTHLY":
+        title = "Montly Time Series " + start + " - " + end
+    if timeSeries == "WEEKLY":
+        title = "Weekly Time Series " + start + " - " + end
 
     minimum = 9999999
     maximum = 0
     for entry in jsonDateRange:
         if float(entry['3. low']) < minimum:
             minimum = float(entry['3. low'])
-    print("min is", minimum)
     for entry in jsonDateRange:
         if float(entry['2. high']) > maximum:
             maximum = float(entry['2. high'])
-    print("max is", maximum)
-    line_chart = pygal.Line()
+    for i in range(0,len(jsonDateRange)-1):
+        openList.append(float(jsonDateRange[i]['1. open']))
+        highList.append(float(jsonDateRange[i]['2. high']))
+        lowList.append(float(jsonDateRange[i]['3. low']))
+        closeList.append(float(jsonDateRange[i]['4. close']))
+        #volumeList.append(float(jsonDateRange[i]['5. volume']))
+
+    line_chart = pygal.Line(x_label_rotation=35)
     line_chart.title = title
-    line_chart.y_labels = map(str, range(math.floor(minimum), math.ceil(maximum)))
-    line_chart.add(categories[0], [None, None,    0, 16.6,   25,   31, 36.4, 45.5, 46.3, 42.8, 37.1])
-    line_chart.add(categories[1],  [None, None, None, None, None, None,    0,  3.9, 10.8, 23.8, 35.3])
-    line_chart.add(categories[2],      [85.8, 84.6, 84.7, 74.5,   66, 58.6, 54.7, 44.8, 36.2, 26.6, 20.1])
-    line_chart.add(categories[3],  [14.2, 15.4, 15.3,  8.9,    9, 10.4,  8.9,  5.8,  6.7,  6.8,  7.5])
-    line_chart.add(categories[4],  [14.2, 15.4, 15.3,  8.9,    9, 10.4,  8.9,  5.8,  6.7,  6.8,  7.5])
+    line_chart.x_labels = xLabels
+    #line_chart.y_labels = map(str, range(math.floor(minimum), math.ceil(maximum)))
+    line_chart.add(categories[0], openList)
+    line_chart.add(categories[1], highList)
+    line_chart.add(categories[2], lowList)
+    line_chart.add(categories[3], closeList)
+    #line_chart.add(categories[4], volumeList)
     line_chart.render_in_browser()
 
 def main():
     choice = "y"
-    timeSeriesChoice = {1: "INTRADAILY",2:"DAILY",3:"WEEKLY",4:"MONTHY"}
+    timeSeriesChoice = {1: "INTRADAILY",2:"DAILY",3:"WEEKLY",4:"MONTHLY"}
     while choice == "y":
         inputs = getInput()
         dateRange = getDateRange(inputs[3], inputs[4],timeSeriesChoice[inputs[2]])
     
         data = apiCall(timeSeriesChoice[inputs[2]],inputs[0])
-        jsonDateRange = parseJSON(data, timeSeriesChoice[inputs[2]],dateRange)
-        createGraph(jsonDateRange, timeSeriesChoice[inputs[2]])
+        buildGraph = parseJSON(data, timeSeriesChoice[inputs[2]],dateRange)
+        jsonDateRange = buildGraph["jsonDateRange"]
+        xLabels = buildGraph["xLabels"]
+
+        createGraph(jsonDateRange, timeSeriesChoice[inputs[2]],xLabels,inputs[3], inputs[4])
         choice = input("Would you like to select another company? ").lower()
 
         #print(data["Monthly Time Series"]["2022-10-20"])
