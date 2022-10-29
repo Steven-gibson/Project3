@@ -1,19 +1,36 @@
-from time import time
+from logging import exception
 from tracemalloc import start
 import requests
 import lxml
 import pygal
 import datetime
+from datetime import date
 import sys
 import math
 from dateutil.relativedelta import relativedelta
-
+from json import JSONDecodeError
 
 # below function takes user input for date start and end
 # gets every date in between them, inclusive
 # has check for what user defined (weekly, monthly, etc.)
 
 def getDateRange(start, end, timeSeries):
+    if timeSeries == "INTRADAY":
+        start_date = start.split("-")
+        end_date = end.split("-")
+        start_date = datetime.datetime(int(start_date[0]), int(start_date[1]), int(start_date[2]), 0, 0, 0)
+        end_date = datetime.datetime(int(end_date[0]), int(end_date[1]), int(end_date[2]), 20, 0, 0)
+        dateRange = []
+        delta = datetime.timedelta(minutes=5)
+        while (start_date <= end_date):
+            day = str(start_date.year) +'-'+str(start_date.month)+'-'+str(start_date.day) + " " + str(start_date.hour) +":"+ str(start_date.minute) + ":00"
+            dateRange.append(day)
+            start_date += delta
+        return dateRange
+    
+
+
+
     start_date = start.split("-")
     end_date = end.split("-")
     start_date = datetime.date(int(start_date[0]), int(start_date[1]), int(start_date[2]))
@@ -87,8 +104,12 @@ def apiCall(timeSeries,symbol):
         #https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=GOOGL&interval=5min&outputsize=full&apikey=TJ5UI0CUVXDLAV9K
         url = 'https://www.alphavantage.co/query?function=TIME_SERIES_' + timeSeries + '&symbol='+ symbol +'&outputsize=full&interval=5min&apikey=TJ5UI0CUVXDLAV9K'
         r = requests.get(url)
-        data = r.json()
+        try:
+            data = r.json()
+        except JSONDecodeError:
+            print("Error Retriving JSON")
         return data
+
 
     if timeSeries == "DAILY":
         # https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=GOOGL&outputsize=full&apikey=TJ5UI0CUVXDLAV9K
@@ -117,11 +138,18 @@ def parseJSON(rawJSON, timeSeries, dateRange):
     if timeSeries == "INTRADAY":
         for date in dateRange:
             try:
-                splitDate = date.split('-')
-                day = date.split('-')[2].zfill(2)
-                date = splitDate[0] +'-'+splitDate[1].zfill(2)+'-'+ day
+                splitEntry = date.split(' ')
+                splitTime = splitEntry[1].split(':')
+                hour = splitTime[0].zfill(2)
+                minute = splitTime[1].zfill(2)
+                second = splitTime[2].zfill(2)
+                splitDate = splitEntry[0].split('-')
+                month = splitDate[1].zfill(2)
+                day = splitDate[2].zfill(2)
+                date = splitDate[0] + '-' + month + '-' + day
+                date = date + " " + hour + ":" + minute + ":" + second
                 print("\n",date)
-                jsonDateRange.append(rawJSON['Time Series (5min)'][date][time])
+                jsonDateRange.append(rawJSON['Time Series (5min)'][date])
                 xLabels.append(date)
             except KeyError:
                 continue
@@ -135,7 +163,6 @@ def parseJSON(rawJSON, timeSeries, dateRange):
                 splitDate = date.split('-')
                 day = date.split('-')[2].zfill(2)
                 date = splitDate[0] +'-'+splitDate[1].zfill(2)+'-'+ day
-                print("*\n",date)
                 jsonDateRange.append(rawJSON['Time Series (Daily)'][date])
                 xLabels.append(date)
             except KeyError:
@@ -150,7 +177,6 @@ def parseJSON(rawJSON, timeSeries, dateRange):
                 splitDate = date.split('-')
                 day = date.split('-')[2].zfill(2)
                 date = splitDate[0] +'-'+splitDate[1].zfill(2)+'-'+ day
-                print("*\n",date)
                 jsonDateRange.append(rawJSON['Weekly Time Series'][date])
                 xLabels.append(date)
             except KeyError:
@@ -164,7 +190,6 @@ def parseJSON(rawJSON, timeSeries, dateRange):
                 splitDate = date.split('-')
                 day = date.split('-')[2].zfill(2)
                 date = splitDate[0] +'-'+splitDate[1].zfill(2)+'-'+ day
-                print("*\n",date)
                 jsonDateRange.append(rawJSON['Monthly Time Series'][date])
                 xLabels.append(date)
             except KeyError:
@@ -180,10 +205,11 @@ def createGraph(jsonDateRange,timeSeries, xLabels, start, end,typeofgraph):
     lowList = []
     closeList = []
     volumeList = []
-    print(jsonDateRange[0])
+    #print(jsonDateRange[0])
+    
     categories = list(jsonDateRange[0].keys())
-
-    if timeSeries == "Intraday":
+#return 
+    if timeSeries == "INTRADAY":
         title = "Time Series (5min) " + start + " - " + end
     if timeSeries == "DAILY":
         title = "Time Series (Daily) " + start + " - " + end
@@ -233,15 +259,24 @@ def createGraph(jsonDateRange,timeSeries, xLabels, start, end,typeofgraph):
 
 def main():
     choice = "y"
-    timeSeriesChoice = {1: "INTRADAILY",2:"DAILY",3:"WEEKLY",4:"MONTHLY"}
+    timeSeriesChoice = {1: "INTRADAY",2:"DAILY",3:"WEEKLY",4:"MONTHLY"}
     while choice == "y":
         inputs = getInput()
         dateRange = getDateRange(inputs[3], inputs[4],timeSeriesChoice[inputs[2]])
-    
         data = apiCall(timeSeriesChoice[inputs[2]],inputs[0])
-        buildGraph = parseJSON(data, timeSeriesChoice[inputs[2]],dateRange,)
-        jsonDateRange = buildGraph["jsonDateRange"]
-        xLabels = buildGraph["xLabels"]
+        try:
+            buildGraph = parseJSON(data, timeSeriesChoice[inputs[2]],dateRange)
+        except:
+            print('Date Not Valid')
+        try:    
+            jsonDateRange = buildGraph["jsonDateRange"]
+        except:
+            print('Error Building Graph')
+        try:    
+            xLabels = buildGraph["xLabels"]
+        except:
+            print('Error adding labels')
+            continue
 
         createGraph(jsonDateRange, timeSeriesChoice[inputs[2]],xLabels,inputs[3], inputs[4],inputs[1])
         choice = input("Would you like to select another company? ").lower()
