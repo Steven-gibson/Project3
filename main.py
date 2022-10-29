@@ -1,3 +1,4 @@
+from time import time
 from tracemalloc import start
 import requests
 import lxml
@@ -82,6 +83,13 @@ def getInput():
         return inputs
 
 def apiCall(timeSeries,symbol):
+    if timeSeries == "INTRADAY":
+        #https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=GOOGL&interval=5min&outputsize=full&apikey=TJ5UI0CUVXDLAV9K
+        url = 'https://www.alphavantage.co/query?function=TIME_SERIES_' + timeSeries + '&symbol='+ symbol +'&outputsize=full&interval=5min&apikey=TJ5UI0CUVXDLAV9K'
+        r = requests.get(url)
+        data = r.json()
+        return data
+
     if timeSeries == "DAILY":
         # https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=GOOGL&outputsize=full&apikey=TJ5UI0CUVXDLAV9K
         url = 'https://www.alphavantage.co/query?function=TIME_SERIES_' + timeSeries + '&symbol='+ symbol +'&outputsize=full&interval=5min&apikey=TJ5UI0CUVXDLAV9K'
@@ -105,6 +113,22 @@ def apiCall(timeSeries,symbol):
 def parseJSON(rawJSON, timeSeries, dateRange):
     jsonDateRange = []
     xLabels = []
+
+    if timeSeries == "INTRADAY":
+        for date in dateRange:
+            try:
+                splitDate = date.split('-')
+                day = date.split('-')[2].zfill(2)
+                date = splitDate[0] +'-'+splitDate[1].zfill(2)+'-'+ day
+                print("\n",date)
+                jsonDateRange.append(rawJSON['Time Series (5min)'][date][time])
+                xLabels.append(date)
+            except KeyError:
+                continue
+        buildGraph={"jsonDateRange":jsonDateRange, "xLabels":xLabels}
+
+        return buildGraph
+
     if timeSeries == "DAILY":
         for date in dateRange:
             try:
@@ -159,6 +183,8 @@ def createGraph(jsonDateRange,timeSeries, xLabels, start, end,typeofgraph):
     print(jsonDateRange[0])
     categories = list(jsonDateRange[0].keys())
 
+    if timeSeries == "Intraday":
+        title = "Time Series (5min) " + start + " - " + end
     if timeSeries == "DAILY":
         title = "Time Series (Daily) " + start + " - " + end
     if timeSeries == "MONTHLY":
