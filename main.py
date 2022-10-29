@@ -1,3 +1,4 @@
+from logging import exception
 from tracemalloc import start
 import requests
 import lxml
@@ -25,6 +26,9 @@ def getDateRange(start, end, timeSeries):
             dateRange.append(day)
             start_date += delta
         return dateRange
+    
+
+
 
     start_date = start.split("-")
     end_date = end.split("-")
