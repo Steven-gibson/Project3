@@ -98,7 +98,7 @@ def getInput():
 
         inputs.append(endDate)
         return inputs
-
+        
 def apiCall(timeSeries,symbol):
     if timeSeries == "INTRADAY":
         #https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=GOOGL&interval=5min&outputsize=full&apikey=TJ5UI0CUVXDLAV9K
@@ -280,7 +280,6 @@ def main():
 
         createGraph(jsonDateRange, timeSeriesChoice[inputs[2]],xLabels,inputs[3], inputs[4],inputs[1])
         choice = input("Would you like to select another company? ").lower()
-
         #print(data["Monthly Time Series"]["2022-10-20"])
 if __name__ == "__main__":
     main()
