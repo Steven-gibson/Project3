@@ -196,9 +196,9 @@ def createGraph(jsonDateRange,timeSeries, xLabels, start, end,typeofgraph):
     lowList = []
     closeList = []
     volumeList = []
-    #print(jsonDateRange[0])
+    print(jsonDateRange[0])
     categories = list(jsonDateRange[0].keys())
-
+#return 
     if timeSeries == "INTRADAY":
         title = "Time Series (5min) " + start + " - " + end
     if timeSeries == "DAILY":
